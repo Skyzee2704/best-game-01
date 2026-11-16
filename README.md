@@ -1,5 +1,9 @@
 # Nova Drift — Gravity Arena
 
+[![make.fun · best-game-01](https://make.fun/badge/best-game-01.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![rank](https://make.fun/badge/best-game-01/Skyzee2704/best-game-01/rank.svg)](https://make.fun/bounty/best-game-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![reward](https://make.fun/badge/best-game-01/Skyzee2704/best-game-01/reward.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+
 A twin-stick arena roguelite for **best-game-01** ($1,000). Pure Canvas 2D, no
 libraries, no external assets, no network. Every sound is synthesised with
 WebAudio; every pixel is drawn in code.
