@@ -184,9 +184,10 @@ export function drawUpgradeScreen(ctx, state) {
     ctx.font = '15px system-ui, sans-serif';
     wrapText(ctx, choice.desc, left + w / 2, y + 190, w - 44, 22);
     const level = (state.player.upgradeLevels[choice.id] || 0) + 1;
+    const alreadyMaxed = (state.player.upgradeLevels[choice.id] || 0) >= choice.max;
     ctx.fillStyle = PALETTE.teal;
     ctx.font = 'bold 14px system-ui, sans-serif';
-    ctx.fillText(level >= choice.max ? 'MAX LEVEL' : `BECOMES Lv ${level}`, left + w / 2, y + h - 26);
+    ctx.fillText(alreadyMaxed ? 'MAX LEVEL' : `BECOMES Lv ${level}`, left + w / 2, y + h - 26);
   });
 }
 
@@ -227,9 +228,12 @@ export function drawGameOverScreen(ctx, state, best) {
   ctx.fillText(`WAVE ${state.wave}   ·   ${state.kills} KILLS   ·   BEST ${Math.max(best, state.score)}`, 640, 392);
   const blink = 0.55 + 0.45 * Math.sin(state.time * 3.2);
   ctx.globalAlpha = blink;
-  ctx.fillStyle = PALETTE.teal;
+  ctx.fillStyle = PALETTE.cream;
+  ctx.shadowColor = 'rgba(245,237,216,0.6)';
+  ctx.shadowBlur = 12;
   ctx.font = 'bold 22px system-ui, sans-serif';
   ctx.fillText('PRESS R OR CLICK TO FLY AGAIN', 640, 560);
+  ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 }
 

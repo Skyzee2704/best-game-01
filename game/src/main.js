@@ -35,8 +35,18 @@ const audio = createAudio();
 const stars = [];
 {
   const rng = createRng(99);
-  for (let i = 0; i < 150; i += 1) {
+  for (let i = 0; i < 220; i += 1) {
     stars.push({ x: rng() * ARENA_W, y: rng() * ARENA_H, r: 0.5 + rng() * 1.6, phase: rng() * Math.PI * 2 });
+  }
+}
+
+// Seeded nebula clouds so the arena reads as deep space, never empty void.
+const nebulae = [];
+{
+  const rng = createRng(7);
+  const hues = ['rgba(45,212,191,0.10)', 'rgba(245,185,66,0.08)', 'rgba(192,132,252,0.09)', 'rgba(255,93,58,0.07)', 'rgba(125,211,252,0.08)'];
+  for (let i = 0; i < 5; i += 1) {
+    nebulae.push({ x: 120 + rng() * (ARENA_W - 240), y: 90 + rng() * (ARENA_H - 180), r: 180 + rng() * 160, color: hues[i] });
   }
 }
 
@@ -65,9 +75,17 @@ function drawBackground(time) {
   grad.addColorStop(1, PALETTE.bgDeep);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+  for (let i = 0; i < nebulae.length; i += 1) {
+    const n = nebulae[i];
+    const g = ctx.createRadialGradient(n.x, n.y, 10, n.x, n.y, n.r);
+    g.addColorStop(0, n.color);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(n.x - n.r, n.y - n.r, n.r * 2, n.r * 2);
+  }
   for (let i = 0; i < stars.length; i += 1) {
     const s = stars[i];
-    ctx.globalAlpha = 0.35 + 0.35 * Math.sin(time * 1.5 + s.phase);
+    ctx.globalAlpha = 0.45 + 0.4 * Math.sin(time * 1.5 + s.phase);
     ctx.fillStyle = PALETTE.cream;
     ctx.fillRect(s.x, s.y, s.r, s.r);
   }
@@ -101,7 +119,7 @@ function drawWells(time) {
     ctx.fillStyle = well.color;
     ctx.font = 'bold 10px system-ui, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(well.kind === 'anomaly' ? 'ANOMALY' : 'GRAVITY WELL', well.x, well.y + well.radius + 26);
+    ctx.fillText(well.kind === 'anomaly' ? 'ANOMALY' : 'GRAVITY WELL', well.x, well.y + well.radius + 42);
   }
 }
 
@@ -114,6 +132,7 @@ function drawPlayer(time) {
   // Engine flame, longer while dashing.
   const thrust = p.dashTime > 0 ? 26 : 12 + Math.sin(time * 30) * 3;
   ctx.rotate(p.angle);
+  ctx.scale(1.15, 1.15);
   ctx.fillStyle = PALETTE.amber;
   ctx.beginPath();
   ctx.moveTo(-p.r - 2, 5);
@@ -147,7 +166,7 @@ function drawEnemies(time) {
     ctx.translate(e.x, e.y);
     ctx.globalAlpha = 1;
     ctx.shadowColor = e.color;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 18;
     ctx.fillStyle = e.flash > 0 ? '#ffffff' : e.color;
     if (e.kind === 'shard') {
       ctx.rotate(time * 2 + e.wobble);
@@ -239,7 +258,7 @@ function drawBullets() {
   for (let i = 0; i < state.bullets.length; i += 1) {
     const b = state.bullets[i];
     ctx.strokeStyle = 'rgba(245,185,66,0.55)';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     for (let t = 0; t < b.trail.length; t += 1) {
       if (t === 0) ctx.moveTo(b.trail[t].x, b.trail[t].y);
@@ -250,7 +269,7 @@ function drawBullets() {
     ctx.shadowColor = 'rgba(245,185,66,0.9)';
     ctx.shadowBlur = 8;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, b.r + 1, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
   }
@@ -258,9 +277,9 @@ function drawBullets() {
     const b = state.enemyBullets[i];
     ctx.fillStyle = '#e879f9';
     ctx.shadowColor = 'rgba(232,121,249,0.9)';
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, b.r + 1.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
   }
@@ -413,29 +432,66 @@ function stageShot(name) {
   if (name === 'upgrade') {
     for (let i = 0; i < 150 / STEP; i += 1) {
       updateArena(state, pilot, STEP, null);
-      if (state.phase === 'upgrade') return 'upgrade';
+      if (state.phase === 'upgrade') {
+        state.floaters.length = 0;
+        state.particles.length = 0;
+        return 'upgrade';
+      }
     }
     state.enemies.length = 0;
     updateArena(state, pilot, STEP, null);
+    state.floaters.length = 0;
+    state.particles.length = 0;
     return 'upgrade';
   }
   if (name === 'end') {
-    for (let i = 0; i < 300 / STEP; i += 1) {
-      updateArena(state, pilot, STEP, null);
-      if (state.phase === 'over') return 'over';
+    // Play carefully into wave 3 first, so the results show a real run
+    // (several waves, dozens of kills), then go reckless and die.
+    const careful = autopilotInput(false);
+    for (let i = 0; i < 120 / STEP; i += 1) {
+      if (state.phase === 'upgrade') chooseUpgrade(state, 0, null);
+      updateArena(state, careful, STEP, null);
+      if (state.wave >= 3 || state.phase === 'over') break;
     }
-    state.player.hp = 0;
-    updateArena(state, pilot, STEP, null);
+    if (state.phase !== 'over') {
+      for (let i = 0; i < 300 / STEP; i += 1) {
+        updateArena(state, pilot, STEP, null);
+        if (state.phase === 'over') break;
+      }
+    }
+    if (state.phase !== 'over') {
+      state.player.hp = 0;
+      updateArena(state, pilot, STEP, null);
+    }
+    state.floaters.length = 0;
+    state.particles.length = 0;
     return 'over';
   }
-  // play: push into wave 2 and stop mid-fight, bullets flying.
-  for (let i = 0; i < 40 / STEP; i += 1) {
-    if (state.phase === 'upgrade') chooseUpgrade(state, 0, null);
-    updateArena(state, pilot, STEP, null);
-    if (state.wave >= 2 && state.time - state.waveSpawnedAt > 6 && state.enemies.length >= 5) break;
-    if (state.phase === 'over') break;
+  // play: push into wave 4 and stop mid-fight, bullets flying, so the cover
+  // shows the full enemy mix (splitters, comets) at its densest — and only
+  // when the ship is in the central frame, clear of the HUD text, so the
+  // score and wave stay readable. If the autopilot dies on the way, fall
+  // back to the wave-2 frame.
+  const playTarget = (minWave, minEnemies, framed) => {
+    for (let i = 0; i < 55 / STEP; i += 1) {
+      if (state.phase === 'upgrade') chooseUpgrade(state, 0, null);
+      updateArena(state, pilot, STEP, null);
+      const p = state.player;
+      const inFrame = !framed || (p.x > 250 && p.x < 1030 && p.y > 150 && p.y < 600);
+      if (state.wave >= minWave && state.time - state.waveSpawnedAt > 5 && state.enemies.length >= minEnemies && inFrame) return 'play';
+      if (state.phase === 'over') return 'over';
+    }
+    return state.phase === 'over' ? 'over' : 'play';
+  };
+  let screen = playTarget(4, 6, true);
+  if (screen === 'over') {
+    resetArena(state);
+    state.seed = SHOT_SEED;
+    state.rng = createRng(SHOT_SEED);
+    startRun(state);
+    screen = playTarget(2, 5, false);
   }
-  return state.phase === 'over' ? 'over' : 'play';
+  return screen;
 }
 
 let best = readBest();
